@@ -21,6 +21,7 @@ header h1{font-size:1.9rem;font-weight:700}
 button,select,input{font:inherit;color:inherit}
 button{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:.4rem .75rem;cursor:pointer}
 button:hover{border-color:var(--ink)}
+button:disabled{opacity:.4;cursor:default}
 button.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 button.dng{color:var(--abs);border-color:var(--abs)}
 button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
@@ -159,6 +160,8 @@ body.ro .adm{display:none!important}body:not(.ro) .roo{display:none!important}
   <button id="bHist">🕘 Historique</button>
   <button id="bPrint">🖨️ Imprimer</button>
   <button id="bFile">📁 Fichier de sauvegarde</button>
+  <button id="bUndo" class="adm">↩️ Annuler la dernière action</button>
+  <button id="bRedo" class="adm">↪️ Rétablir</button>
   <button id="bDay" class="adm">🔒 Bloquer / débloquer un jour</button>
   <button id="bLogin" class="roo">🔑 Mode gestion</button>
   <button id="bCode" class="adm">🔑 Changer le code</button>
@@ -185,7 +188,7 @@ let fh=null,wT=null;
 const idb=(m,v)=>new Promise(r=>{try{const q=indexedDB.open('pl-fs',1);q.onupgradeneeded=()=>q.result.createObjectStore('h');q.onsuccess=()=>{const st=q.result.transaction('h',m?'readwrite':'readonly').objectStore('h');const g=m?st.put(v,'f'):st.get('f');g.onsuccess=()=>r(g.result);g.onerror=()=>r(null)};q.onerror=()=>r(null)}catch(e){r(null)}});
 function payload(){let A={};try{A=JSON.parse(localStorage.getItem('planning-arch')||'{}')}catch(e){}return JSON.stringify({v:1,savedAt:new Date().toISOString(),S,arch:A})}
 async function writeFile(){if(!fh)return;try{if((await fh.queryPermission({mode:'readwrite'}))!=='granted')return;const w=await fh.createWritable();await w.write(payload());await w.close()}catch(e){}}
-function loadPayload(txt){const o=JSON.parse(txt);if(!o||!o.S||!o.S.staff)throw 0;S=o.S;try{localStorage.setItem('planning-state',JSON.stringify(S));if(o.arch)localStorage.setItem('planning-arch',JSON.stringify(o.arch))}catch(e){}}
+function loadPayload(txt){U=[];Rd=[];lastJ=null;const o=JSON.parse(txt);if(!o||!o.S||!o.S.staff)throw 0;S=o.S;try{localStorage.setItem('planning-state',JSON.stringify(S));if(o.arch)localStorage.setItem('planning-arch',JSON.stringify(o.arch))}catch(e){}}
 const FT=[{description:'Planning',accept:{'application/json':['.json']}}];
 function fileForm(){
  if(!window.showSaveFilePicker)return toast('Ouvrez le planning avec Chrome ou Edge');
@@ -239,8 +242,10 @@ const FQ={all:'',even:' (sem. paires)',odd:' (sem. impaires)'};
 function summary(s){return [1,2,3,4,5,6,0].filter(x=>s.sched[x].on).map(x=>DN[x]+(s.sched[x].freq!=='all'?' ½':'')).join(' ')}
 
 /* ---------- Stockage ---------- */
+let U=[],Rd=[],lastJ=null;
 function save(){
  if(!admin)return;
+ {const j=JSON.stringify(S);if(lastJ!==null&&lastJ!==j){U.push(lastJ);if(U.length>50)U.shift();Rd=[]}lastJ=j}
  clearTimeout(wT);wT=setTimeout(writeFile,400);
  try{localStorage.setItem('planning-state',JSON.stringify(S))}catch(e){}
  if(!db)return;
@@ -303,6 +308,8 @@ function render(){
  if(!admin){try{admin=!!S.code&&sessionStorage.getItem('pl-admin')===S.code}catch(e){}}
  document.body.classList.toggle('ro',!admin);
  migrate();side();
+ if(lastJ===null)lastJ=JSON.stringify(S);
+ {const u=$('bUndo'),r=$('bRedo');if(u){u.disabled=!U.length;r.disabled=!Rd.length}}
  {const v=admin||!S.staff.length;$('bFile').style.display=v?'':'none';$('sFile').style.display=v?'':'none';$('sFile').innerHTML=fh?`💾 Sauvegardé dans <b>${esc(fh.name)}</b>`:'<span style="color:var(--abs)">⚠️ Aucun fichier de sauvegarde</span>'}
  const f=$('fStaff'),fv=f.value;
  f.innerHTML='<option value="">Tous</option>'+S.staff.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');f.value=fv;
@@ -340,9 +347,9 @@ function weekHTML(D,mon,ro,arch){
   h+='<div class="dcol">';
   for(const st of staff){
    const a=absOn(st.id,d,D.absences),c=daySched(st,d);let inner='';
-   if(c&&!a){const s0=y(tm(c.start)),e0=y(tm(c.end));if(s0>0)inner+=`<div class="nw" style="top:0;height:calc(var(--hp)*${s0})"></div>`;if(e0<nh)inner+=`<div class="nw" style="top:calc(var(--hp)*${e0});bottom:0"></div>`;const bk=brk(st,d);if(bk)inner+=`<div class="nw brk" style="top:calc(var(--hp)*${y(bk[0])});height:calc(var(--hp)*${(bk[1]-bk[0])/60})" title="Pause"></div>`;for(const p of absPart(st.id,d,D.absences))inner+=`<div class="nw pab" style="top:calc(var(--hp)*${y(tm(p.hs))});height:calc(var(--hp)*${(tm(p.he)-tm(p.hs))/60})"><span>${esc(p.reason)} ${p.hs}–${p.he}</span></div>`;const ex=!ro&&(S.extra||[]).find(e=>e.staffId===st.id&&e.date===d);if(ex)inner+=`<div class="unl" data-extra="${ex.id}" title="Cliquer pour rebloquer">🔓 débloqué</div>`}
+   if(c&&!a){const s0=y(tm(c.start)),e0=y(tm(c.end));if(s0>0)inner+=`<div class="nw" style="top:0;height:calc(var(--hp)*${s0})"></div>`;if(e0<nh)inner+=`<div class="nw" style="top:calc(var(--hp)*${e0});bottom:0"></div>`;const bk=brk(st,d);if(bk)inner+=`<div class="nw brk" style="top:calc(var(--hp)*${y(bk[0])});height:calc(var(--hp)*${(bk[1]-bk[0])/60})" title="Pause"></div>`;for(const p of absPart(st.id,d,D.absences))inner+=`<div class="nw pab" ${ro?'':`data-abs="${p.id}" title="Cliquer pour modifier"`} style="${ro?'':'pointer-events:auto;cursor:pointer;'}top:calc(var(--hp)*${y(tm(p.hs))});height:calc(var(--hp)*${(tm(p.he)-tm(p.hs))/60})"><span>${esc(p.reason)} ${p.hs}–${p.he}</span></div>`;const ex=!ro&&(S.extra||[]).find(e=>e.staffId===st.id&&e.date===d);if(ex)inner+=`<div class="unl" data-extra="${ex.id}" title="Cliquer pour rebloquer">🔓 débloqué</div>`}
    {const bx=!ro&&!c&&(S.extra||[]).find(e=>e.staffId===st.id&&e.date===d&&!e.on);if(bx)inner+=`<div class="unl" data-extra="${bx.id}" title="Cliquer pour annuler">🔒 bloqué</div>`}
-   if(a)inner+=`<div class="labs">Absent · ${esc(a.reason||'')}</div>`;
+   if(a)inner+=`<div class="labs" ${ro?'':`data-abs="${a.id}" style="cursor:pointer" title="Cliquer pour modifier"`}>Absent · ${esc(a.reason||'')}</div>`;
    for(const t of D.tasks)if(t.staffId===st.id){const G=segsOf(t);G.forEach((g,i)=>{if(g.d!==d)return;
     inner+=`<div class="ev ${t.fixed?'fixed':''} ${t.done?'done':''} ${conflict(t)?'conflict':''}" style="--c:${st.color};--tc:${t.color||st.color};top:calc(var(--hp)*${y(g.s)});height:calc(var(--hp)*${(g.e-g.s)/60} - 2px)" ${ro?(arch?'':`data-view="${t.id}"`):`data-task="${t.id}" draggable="true"`} title="${esc(st.name)} · ${esc(t.title)}${t.note?' — '+esc(t.note):''}"><div class="t">${fm(g.s)}–${fm(g.e)} ${t.fixed?'📌':''}${t.done?'✓':''}${G.length>1?` (${i+1}/${G.length})`:''}</div>${esc(t.title)}${t.note?`<div class="nt">📝 ${esc(t.note)}</div>`:''}</div>`})}
    h+=`<div class="lane ${!c?'off':''} ${a?'absent':''}" ${ro||!c||a?'':`data-lane="${st.id}|${d}"`} ${ro||c||a?'':`data-off="${st.id}|${d}" title="Jour non travaillé : cliquer pour débloquer"`}>${inner}</div>`;
@@ -428,23 +435,26 @@ function taskForm(id,pre={}){
   save();close();render();if(mv)toast(mv+' tâche(s) décalée(s)');
  };
 }
-function absForm(pre={}){
+function absForm(pre={},eid){
+ const E=eid&&S.absences.find(x=>x.id===eid);if(E)pre={staffId:E.staffId,date:E.from};
  if(!S.staff.length)return toast('Ajoutez d\'abord un intervenant');
  const d=pre.date||ds(new Date()),rs=[...new Set(['Congés','Maladie','Formation','RTT','Rendez-vous médical',...S.absences.map(a=>a.reason)])];
- open(`<h3>Nouvelle absence</h3><div class="grid">
+ open(`<h3>${E?'Modifier l\'absence':'Nouvelle absence'}</h3><div class="grid">
  <label class="full">Intervenant<select id="aS">${opts(pre.staffId)}</select></label>
- <label class="full">Durée<select id="aK"><option value="d">Journée(s) entière(s)</option><option value="h">Quelques heures</option></select></label>
- <label>Du<input id="aF" type="date" value="${d}"></label><label id="lT">Au<input id="aT" type="date" value="${d}"></label>
- <label class="hh" style="display:none">De<input id="aHs" type="time" value="14:00"></label><label class="hh" style="display:none">À<input id="aHe" type="time" value="16:00"></label>
- <label class="full">Motif (choisissez ou tapez le vôtre)<input id="aR" list="rsn" placeholder="Ex : déménagement"><datalist id="rsn">${rs.map(r=>`<option value="${esc(r)}">`).join('')}</datalist></label></div>
- <div class="acts"><span class="sp"></span><button id="x">Annuler</button><button class="pri" id="ok">Enregistrer</button></div>`);
+ <label class="full">Durée<select id="aK"><option value="d">Journée(s) entière(s)</option><option value="h" ${E&&E.hs?'selected':''}>Quelques heures</option></select></label>
+ <label>Du<input id="aF" type="date" value="${d}"></label><label id="lT">Au<input id="aT" type="date" value="${E?E.to:d}"></label>
+ <label class="hh" style="display:none">De<input id="aHs" type="time" value="${E&&E.hs||'14:00'}"></label><label class="hh" style="display:none">À<input id="aHe" type="time" value="${E&&E.he||'16:00'}"></label>
+ <label class="full">Motif (choisissez ou tapez le vôtre)<input id="aR" list="rsn" placeholder="Ex : déménagement" value="${E?esc(E.reason):''}"><datalist id="rsn">${rs.map(r=>`<option value="${esc(r)}">`).join('')}</datalist></label></div>
+ <div class="acts">${E?'<button class="dng" id="aDel">Supprimer</button>':''}<span class="sp"></span><button id="x">Annuler</button><button class="pri" id="ok">Enregistrer</button></div>`);
  $('x').onclick=close;
+ if(E){$('aDel').onclick=()=>{S.absences=S.absences.filter(x=>x!==E);reflow(E.staffId,E.from);save();close();render();toast('Absence supprimée')};document.querySelectorAll('.hh').forEach(x=>x.style.display=E.hs?'':'none');$('lT').style.display=E.hs?'none':''}
  $('aK').onchange=()=>{const h=$('aK').value==='h';document.querySelectorAll('.hh').forEach(x=>x.style.display=h?'':'none');$('lT').style.display=h?'none':''};
  $('ok').onclick=()=>{
   const h=$('aK').value==='h',a={id:uid(),staffId:$('aS').value,from:$('aF').value,to:h?$('aF').value:$('aT').value,reason:$('aR').value.trim()||'Autre'};
   if(h){a.hs=$('aHs').value;a.he=$('aHe').value;if(!a.hs||!a.he||tm(a.he)<=tm(a.hs))return toast('Heures invalides')}
   if(!a.from||a.to<a.from)return toast('Dates invalides');
-  S.absences.push(a);const mv=reflow(a.staffId,a.from);
+  let mv=0;if(E){a.id=E.id;S.absences=S.absences.filter(x=>x!==E);mv+=reflow(E.staffId,E.from)}
+  S.absences.push(a);mv+=reflow(a.staffId,a.from<(E?E.from:a.from)?a.from:(E?E.from:a.from));
   const cf=S.tasks.filter(t=>t.staffId===a.staffId&&t.fixed&&t.date>=a.from&&t.date<=a.to&&conflict(t)).length;
   save();close();render();toast(`${mv} tâche(s) décalée(s)${cf?` · ${cf} rendez-vous en conflit (encadré orange)`:''}`);
  };
@@ -462,8 +472,9 @@ function recap(){
   for(const st of S.staff){const L=list.filter(a=>a.staffId===st.id);const by={};let tot=0,hr=0;for(const a of L){const k=by[a.reason]=by[a.reason]||{j:0,h:0};if(a.hs){const x=(tm(a.he)-tm(a.hs))/60;hr+=x;k.h+=x}else{const n=workDaysIn(st,a,from,to);tot+=n;k.j+=n}}
    h+=`<tr><td><span class="dot" style="background:${st.color}"></span>${esc(st.name)}</td><td>${tot}</td><td>${hr?hr+' h':'—'}</td><td>${Object.entries(by).map(([k,n])=>`${esc(k)} : ${[n.j?n.j+' j':'',n.h?n.h+' h':''].filter(Boolean).join(' + ')}`).join(', ')||'—'}</td></tr>`}
   h+='</table><h3 style="font-size:1.1rem;margin:.8rem 0 .3rem">Détail</h3><table class="tbl"><tr><th>Intervenant</th><th>Du</th><th>Au</th><th>Motif</th><th></th></tr>';
-  h+=list.sort((a,b)=>a.from.localeCompare(b.from)).map(a=>`<tr><td>${esc(staffOf(a.staffId)?.name)}</td><td>${fr(a.from)}</td><td>${a.hs?a.hs+'–'+a.he:fr(a.to)}</td><td>${esc(a.reason)}</td><td><button class="dng adm" data-delabs="${a.id}">✕</button></td></tr>`).join('')||'<tr><td colspan="5">Aucune absence</td></tr>';
+  h+=list.sort((a,b)=>a.from.localeCompare(b.from)).map(a=>`<tr><td>${esc(staffOf(a.staffId)?.name)}</td><td>${fr(a.from)}</td><td>${a.hs?a.hs+'–'+a.he:fr(a.to)}</td><td>${esc(a.reason)}</td><td style="white-space:nowrap"><button class="adm" data-edabs="${a.id}" title="Modifier">✏️</button> <button class="dng adm" data-delabs="${a.id}" title="Supprimer">✕</button></td></tr>`).join('')||'<tr><td colspan="5">Aucune absence</td></tr>';
   $('rOut').innerHTML=h+'</table>';
+  $('rOut').querySelectorAll('[data-edabs]').forEach(b=>b.onclick=()=>absForm({},b.dataset.edabs));
   $('rOut').querySelectorAll('[data-delabs]').forEach(b=>b.onclick=()=>{const x=S.absences.find(a=>a.id===b.dataset.delabs);S.absences=S.absences.filter(a=>a!==x);if(x)reflow(x.staffId,x.from);save();render();draw()});
  };
  $('rP').onchange=draw;$('rM').onchange=draw;draw();
@@ -489,7 +500,8 @@ async function hist(){
  $('x').onclick=close;
  let L=[];try{L=await listArch()}catch(e){}
  L.sort((a,b)=>b.week.localeCompare(a.week));
- $('hOut').innerHTML=L.length?'<table class="tbl"><tr><th>Semaine</th><th>Archivée le</th><th></th></tr>'+L.map((a,i)=>`<tr><td>${fr(a.week)} → ${fr(ds(add(pd(a.week),6)))}/${a.week.slice(0,4)}</td><td>${new Date(a.savedAt).toLocaleString('fr-FR')}</td><td><button data-i="${i}">Voir</button></td></tr>`).join('')+'</table>':'Aucune semaine archivée.';
+ $('hOut').innerHTML=L.length?'<table class="tbl"><tr><th>Semaine</th><th>Archivée le</th><th></th></tr>'+L.map((a,i)=>`<tr><td>${fr(a.week)} → ${fr(ds(add(pd(a.week),6)))}/${a.week.slice(0,4)}</td><td>${new Date(a.savedAt).toLocaleString('fr-FR')}</td><td><button data-i="${i}">Voir</button>${admin?` <button class="dng" data-di="${i}" title="Supprimer cette archive">✕</button>`:''}</td></tr>`).join('')+'</table>':'Aucune semaine archivée.';
+ $('hOut').querySelectorAll('[data-di]').forEach(b=>b.onclick=async function(){if(!this.dataset.ok){this.dataset.ok=1;this.textContent='Confirmer ?';return}const k=L[+this.dataset.di].week;try{if(db)await db.collection('archives').doc(k).delete();else{const A=JSON.parse(localStorage.getItem('planning-arch')||'{}');delete A[k];localStorage.setItem('planning-arch',JSON.stringify(A))}writeFile();toast('Archive supprimée');hist()}catch(e){toast('Échec de la suppression')}});
  $('hOut').querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{
   const a=L[+b.dataset.i];a.staff.forEach(migrateStaff);const html=weekHTML(a,pd(a.week),true,true);
   $('dlg').style.width='min(1200px,96vw)';
@@ -589,6 +601,10 @@ function codeForm(change){
   try{sessionStorage.setItem('pl-admin',S.code)}catch(e){}close();render();toast('Mode gestion activé')};
 }
 $('bFile').onclick=fileForm;
+function undo(){if(!admin||!U.length)return toast('Rien à annuler');Rd.push(JSON.stringify(S));const j=U.pop();S=JSON.parse(j);lastJ=j;save();render();toast('Action annulée')}
+function redo(){if(!admin||!Rd.length)return toast('Rien à rétablir');U.push(JSON.stringify(S));const j=Rd.pop();S=JSON.parse(j);lastJ=j;save();render();toast('Action rétablie')}
+$('bUndo').onclick=undo;$('bRedo').onclick=redo;
+document.addEventListener('keydown',e=>{if(!(e.ctrlKey||e.metaKey)||$('dlg').open||/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName))return;const k=e.key.toLowerCase();if(k==='z'&&!e.shiftKey){e.preventDefault();undo()}else if(k==='y'||(k==='z'&&e.shiftKey)){e.preventDefault();redo()}});
 $('bLogin').onclick=()=>codeForm(false);$('bCode').onclick=()=>codeForm(true);
 $('bLogout').onclick=()=>{admin=false;try{sessionStorage.removeItem('pl-admin')}catch(e){}render();toast('Lecture seule')};
 $('bDay').onclick=()=>dayForm();
@@ -597,6 +613,7 @@ $('bRecap').onclick=recap;
 $('bArch').onclick=archive;
 $('bHist').onclick=hist;
 $('view').addEventListener('click',e=>{
+ const ab=e.target.closest('[data-abs]');if(ab)return absForm({},ab.dataset.abs);
  const vw=e.target.closest('[data-view]');if(vw)return viewTask(vw.dataset.view);
  const u=e.target.closest('[data-extra]');if(u)return relock(u.dataset.extra);
  const t=e.target.closest('[data-task]');if(t)return taskForm(t.dataset.task);
