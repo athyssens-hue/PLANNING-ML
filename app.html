@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Planning atelier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--fix:#8a2d4a;--bg:#f4f1ea;--panel:#fffdf8;--ink:#12283a;--muted:#5b6b78;--line:#d9d3c6;--accent:#0d6e7a;--accent-ink:#fff;--off:#ebe6db;--abs:#c2553d;--warn:#b8860b;--chip:#ffffff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1a24;--panel:#142331;--ink:#e6edf2;--muted:#8fa2b1;--line:#253a4b;--accent:#3fb3bf;--accent-ink:#06222a;--off:#101e2a;--abs:#e07a62;--warn:#e0b04a;--chip:#1a2e3f}}
+:root[data-theme="dark"]{--bg:#0e1a24;--panel:#142331;--ink:#e6edf2;--muted:#8fa2b1;--line:#253a4b;--accent:#3fb3bf;--accent-ink:#06222a;--off:#101e2a;--abs:#e07a62;--warn:#e0b04a;--chip:#1a2e3f}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*:before,*:after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Barlow,system-ui,sans-serif}
+h1,h2,h3{font-family:"Barlow Condensed",Barlow,sans-serif;margin:0;letter-spacing:.01em}
+header{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;justify-content:space-between;padding:1rem 1.2rem;border-bottom:2px solid var(--ink)}
+header h1{font-size:1.9rem;font-weight:700}
+.bar{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center}
+button,select,input{font:inherit;color:inherit}
+button{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:.4rem .75rem;cursor:pointer}
+button:hover{border-color:var(--ink)}
+button.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.dng{color:var(--abs);border-color:var(--abs)}
+button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.nav{display:flex;align-items:center;gap:.5rem;padding:.8rem 1.2rem}
+.nav h2{font-size:1.4rem;font-weight:600;min-width:15rem}
+.wrap{overflow-x:auto;padding:0 1.2rem 1.5rem}
+table.wk{border-collapse:collapse;width:100%;min-width:980px;background:var(--panel)}
+.wk th,.wk td{border:1px solid var(--line);vertical-align:top;padding:.35rem}
+.wk thead th{font-family:"Barlow Condensed",sans-serif;font-weight:600;font-size:1.05rem;text-align:left;background:var(--bg)}
+.wk thead th.today{color:var(--accent)}
+.who{width:130px}
+.app{display:grid;grid-template-columns:260px minmax(0,1fr);align-items:start;min-height:100vh}
+aside h1{font-size:1.7rem;font-weight:700;margin-bottom:.8rem;padding-bottom:.5rem;border-bottom:2px solid var(--ink)}
+.menu{display:flex;flex-direction:column;gap:.3rem;margin-bottom:1.2rem}
+.menu button{text-align:left;width:100%}
+main{min-width:0}
+.nav{padding-top:1rem}
+aside{border-right:1px solid var(--line);padding:1rem;position:sticky;top:0;max-height:100vh;overflow:auto}
+aside section+section{margin-top:1.2rem}
+.sh{display:flex;justify-content:space-between;align-items:center;margin:.2rem 0 .5rem}
+.sh h3{font-size:1.25rem}
+.srow{padding:.35rem .4rem;border-radius:6px;cursor:pointer}.srow:hover{background:var(--off)}
+.srow small{display:block;color:var(--muted);margin-left:1.05rem}
+#sTasks{min-height:90px;border:1px dashed var(--line);border-radius:6px;padding:.4rem}
+#sTasks small{color:var(--muted)}
+.chip[draggable=true]{cursor:grab}
+.over{outline:2px dashed var(--accent);outline-offset:-2px}
+.sched td{padding:.25rem .2rem;border-bottom:1px solid var(--line)}
+.sched input[type=time]{width:6.5rem}
+@media(max-width:760px){.app{grid-template-columns:1fr}aside{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--line)}}
+.who b{display:block;font-size:1.05rem}
+.who small{color:var(--muted)}
+.dot{display:inline-block;width:.7rem;height:.7rem;border-radius:50%;margin-right:.35rem;vertical-align:middle}
+td.cell{height:max(92px,calc((100vh - 140px) / var(--rows,4)));cursor:pointer;width:calc((100% - 130px)/7)}
+td.off{background:var(--off);cursor:default}
+td.absent{background:repeating-linear-gradient(135deg,transparent 0 8px,color-mix(in srgb,var(--abs) 14%,transparent) 8px 16px)}
+.abs{font-size:.8rem;color:var(--abs);font-weight:600;margin-bottom:.2rem}
+.chip{background:var(--chip);border:1px solid var(--line);border-left:4px solid var(--c);border-radius:4px;padding:.2rem .35rem;margin-bottom:.25rem;font-size:.85rem;cursor:pointer}
+.chip .t{color:var(--muted);font-size:.75rem}
+.chip.fixed{border-style:solid;box-shadow:inset 0 0 0 1px var(--c)}
+.chip.done{opacity:.55;text-decoration:line-through}
+.chip.conflict{outline:2px solid var(--warn)}
+.month{display:grid;grid-template-columns:repeat(7,minmax(120px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);min-width:860px}
+.month div.d{background:var(--panel);min-height:105px;padding:.3rem;cursor:pointer}
+.month div.h{background:var(--bg);font-family:"Barlow Condensed",sans-serif;font-weight:600;padding:.3rem}
+.month div.out{opacity:.4}
+.month .n{font-weight:600;font-size:.9rem}
+.mini{font-size:.75rem;border-left:3px solid var(--c);padding-left:.25rem;margin-top:.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini.a{color:var(--abs);border-color:var(--abs)}
+dialog{border:none;border-radius:10px;padding:0;background:var(--panel);color:var(--ink);width:min(680px,96vw);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+dialog::backdrop{background:rgba(10,20,30,.45)}
+.dlg{padding:1.1rem 1.2rem}
+.dlg h3{font-size:1.4rem;margin-bottom:.7rem}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+.grid .full{grid-column:1/-1}
+label{display:flex;flex-direction:column;font-size:.85rem;color:var(--muted);gap:.2rem}
+label.ck{flex-direction:row;align-items:center;gap:.4rem;color:var(--ink)}
+input,select{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:.4rem}
+.days{display:flex;gap:.3rem;flex-wrap:wrap}
+.days label{flex-direction:row;align-items:center;gap:.2rem;color:var(--ink)}
+.acts{display:flex;flex-wrap:wrap;gap:.4rem;justify-content:flex-end;margin-top:1rem}
+.acts .sp{flex:1}
+.tbl{width:100%;border-collapse:collapse;font-size:.9rem}
+.tbl th,.tbl td{border-bottom:1px solid var(--line);padding:.35rem;text-align:left}
+.scroll{max-height:60vh;overflow:auto}
+.hint{color:var(--muted);font-size:.85rem;padding:0 1.2rem .6rem}
+#toast{position:fixed;bottom:calc(1rem + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:.5rem 1rem;border-radius:6px;display:none;z-index:9}
+.ro{padding:.8rem 0}
+@media print{
+ @page{size:A4 landscape;margin:8mm}
+ header .bar,.nav button,.nav select,.hint,#toast,aside{display:none!important}
+ .app{display:block}
+ body{background:#fff;color:#000;font-size:11px}
+ .wrap{overflow:visible;padding:0}
+ table.wk{min-width:0}
+ td.cell{height:auto}
+}
+.app{height:100vh}
+aside{height:100vh;max-height:none}
+main{height:100vh;overflow:hidden}
+.wnav{display:flex;gap:.3rem}.wnav button{flex:1;padding:.4rem .3rem}
+#title{font-size:1.2rem;margin:.6rem 0}
+.menu{margin:.8rem 0 1rem;border:1px solid var(--line);border-radius:6px;padding:.3rem .5rem .5rem}
+.menu summary{cursor:pointer;font-family:"Barlow Condensed",sans-serif;font-weight:600;font-size:1.15rem;padding:.2rem 0}
+.menu button{display:block;width:100%;text-align:left;margin-top:.3rem}
+#view.wrap{padding:0;overflow:auto;height:100%}
+.tg{display:grid;grid-template-columns:44px repeat(7,minmax(90px,1fr));min-width:720px;background:var(--panel);--hp:max(32px,calc((100vh - 56px) / var(--nh)))}
+.tg .hd{position:sticky;top:0;z-index:3;background:var(--bg);border-bottom:1px solid var(--line);border-left:1px solid var(--line);padding:.25rem .3rem;height:56px;overflow:hidden}
+.tg .hd b{font-family:"Barlow Condensed",sans-serif;font-size:1.05rem}.tg .hd.today b{color:var(--accent)}
+.lh{display:flex;gap:2px;margin-top:.2rem}.lh span{flex:1;min-width:0;font-size:.68rem;border-top:3px solid var(--c);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.hcol .h{height:var(--hp);font-size:.7rem;color:var(--muted);text-align:right;padding-right:.3rem;transform:translateY(-.5em)}
+.hcol .h:first-child{transform:none}
+.dcol{display:flex;border-left:1px solid var(--line)}
+.lane{flex:1;min-width:0;position:relative;height:calc(var(--hp) * var(--nh));background:repeating-linear-gradient(to bottom,var(--line) 0 1px,transparent 1px var(--hp));cursor:copy}
+.lane+.lane{border-left:1px dotted var(--line)}
+.lane.off{background-color:var(--off);cursor:default}
+.lane.absent{cursor:default;background:repeating-linear-gradient(135deg,transparent 0 8px,color-mix(in srgb,var(--abs) 16%,transparent) 8px 16px),repeating-linear-gradient(to bottom,var(--line) 0 1px,transparent 1px var(--hp))}
+.nw{position:absolute;left:0;right:0;background:var(--off);opacity:.85;pointer-events:none}
+.labs{position:absolute;top:2px;left:2px;right:2px;font-size:.7rem;font-weight:600;color:var(--abs)}
+.ev{position:absolute;left:2px;right:2px;overflow:hidden;font-size:.75rem;line-height:1.2;padding:.15rem .25rem;border-radius:4px;background:color-mix(in srgb,var(--c) 20%,var(--panel));border-left:3px solid var(--c);cursor:grab;z-index:1}
+.ev.fixed{box-shadow:inset 0 0 0 1px var(--c)}.ev.done{opacity:.5;text-decoration:line-through}.ev.conflict{outline:2px solid var(--warn)}
+.ev .t{color:var(--muted);font-size:.66rem}
+.ponly{display:none}
+@media(max-width:760px){.app,aside,main{height:auto}main{overflow:visible}}
+@media print{.ponly{display:block}.app,main,#view.wrap{height:auto;overflow:visible}.tg{--hp:26px;min-width:0}.hd{position:static}}
+.ev.fixed,.chip.fixed{background:var(--fix);color:#fff;border-left-color:var(--c)}
+.ev.fixed .t,.chip.fixed .t{color:rgba(255,255,255,.8)}
+.lane.off[data-off]{cursor:pointer}.lane.off[data-off]:hover{background-color:color-mix(in srgb,var(--accent) 10%,var(--off))}
+.unl{position:absolute;bottom:2px;left:2px;right:2px;font-size:.66rem;color:var(--accent);cursor:pointer;z-index:2}
+.nw.brk{background:repeating-linear-gradient(90deg,var(--off) 0 6px,transparent 6px 10px);opacity:1}
+.leg{display:inline-block;width:.8rem;height:.8rem;border-radius:2px;background:var(--fix);vertical-align:middle}
+body.ro .adm{display:none!important}body:not(.ro) .roo{display:none!important}
+.ev{background:color-mix(in srgb,var(--tc,var(--c)) 32%,var(--panel));border-left:4px solid var(--c)}
+#sTasks .chip{background:color-mix(in srgb,var(--c) 25%,var(--panel))}#sTasks .chip.fixed{background:var(--fix)}
+.ev.fixed{background:var(--fix)}
+.pab{background:repeating-linear-gradient(135deg,transparent 0 6px,color-mix(in srgb,var(--abs) 28%,transparent) 6px 12px);opacity:1;z-index:2}
+.pab span{font-size:.65rem;color:var(--abs);font-weight:600;padding:2px;display:block}
+.nt{font-size:.66rem;opacity:.85;margin-top:.1rem}
+</style>
+</head>
+<body>
+
+<div class="app">
+<aside id="side">
+ <div class="wnav"><button id="prev">◀</button><button id="today">Aujourd'hui</button><button id="next">▶</button></div>
+ <h2 id="title"></h2>
+ <div id="sFile" style="font-size:.8rem;margin-bottom:.4rem"></div>
+ <div class="roo" style="font-size:.85rem;color:var(--muted);margin-bottom:.4rem">👁️ Lecture seule</div>
+ <label>Afficher<select id="fStaff"></select></label>
+ <details class="menu" open><summary>☰ Menu</summary>
+  <button id="bWeek" class="on">📅 Semaine</button>
+  <button id="bMonth">🗓️ Mois</button>
+  <button id="bAbs" class="adm">➕ Absence</button>
+  <button id="bRecap">📊 Récap absences</button>
+  <button id="bArch" class="adm">💾 Archiver la semaine</button>
+  <button id="bHist">🕘 Historique</button>
+  <button id="bPrint">🖨️ Imprimer</button>
+  <button id="bFile">📁 Fichier de sauvegarde</button>
+  <button id="bDay" class="adm">🔒 Bloquer / débloquer un jour</button>
+  <button id="bLogin" class="roo">🔑 Mode gestion</button>
+  <button id="bCode" class="adm">🔑 Changer le code</button>
+  <button id="bLogout" class="adm">🚪 Quitter le mode gestion</button>
+ </details>
+ <section><div class="sh"><h3>Intervenants</h3><button id="bStaff" class="adm">+ Ajouter</button></div><div id="sStaff"></div></section>
+ <section class="adm"><div class="sh"><h3>Tâches à planifier</h3><button id="bTask" class="pri adm">+ Créer</button></div><div id="sTasks"></div></section>
+ <p class="hint" style="padding:0;margin-top:1rem">Glissez une tâche sur le planning à l'heure voulue. <span class="leg"></span> 📌 = tâche fixe. Cliquez sur un jour grisé pour le débloquer. Cliquez dans une colonne vide pour créer une tâche à cette heure.</p>
+</aside>
+<main><h2 class="ponly" id="ptitle"></h2><div class="wrap" id="view">Chargement…</div></main>
+</div>
+
+<dialog id="dlg"><div class="dlg" id="dlgBody"></div></dialog>
+<div id="toast"></div>
+
+<script>
+const DN=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+const MN=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+const COLORS=['#0d6e7a','#c2553d','#6b4fa0','#3d8b3d','#b8860b','#2f5f9e','#a23b72','#5d6d7e'];
+let S={staff:[],tasks:[],absences:[]};
+let admin=false;const TC=['#2a9d8f','#e76f51','#457b9d','#f4a261','#6a4c93','#43aa8b','#e9c46a','#577590','#d62828','#8ab17d'];const rc=()=>TC[Math.floor(Math.random()*TC.length)];
+const hash=x=>{let h=5381;for(const c of 'pl@'+x)h=((h<<5)+h+c.charCodeAt(0))|0;return String(h)};
+let fh=null,wT=null;
+const idb=(m,v)=>new Promise(r=>{try{const q=indexedDB.open('pl-fs',1);q.onupgradeneeded=()=>q.result.createObjectStore('h');q.onsuccess=()=>{const st=q.result.transaction('h',m?'readwrite':'readonly').objectStore('h');const g=m?st.put(v,'f'):st.get('f');g.onsuccess=()=>r(g.result);g.onerror=()=>r(null)};q.onerror=()=>r(null)}catch(e){r(null)}});
+function payload(){let A={};try{A=JSON.parse(localStorage.getItem('planning-arch')||'{}')}catch(e){}return JSON.stringify({v:1,savedAt:new Date().toISOString(),S,arch:A})}
+async function writeFile(){if(!fh)return;try{if((await fh.queryPermission({mode:'readwrite'}))!=='granted')return;const w=await fh.createWritable();await w.write(payload());await w.close()}catch(e){}}
+function loadPayload(txt){const o=JSON.parse(txt);if(!o||!o.S||!o.S.staff)throw 0;S=o.S;try{localStorage.setItem('planning-state',JSON.stringify(S));if(o.arch)localStorage.setItem('planning-arch',JSON.stringify(o.arch))}catch(e){}}
+const FT=[{description:'Planning',accept:{'application/json':['.json']}}];
+function fileForm(){
+ if(!window.showSaveFilePicker)return toast('Ouvrez le planning avec Chrome ou Edge');
+ open(`<h3>Fichier de sauvegarde</h3><p>Le planning s'enregistre automatiquement dans ce fichier à chaque modification. Même si l'historique du navigateur est effacé, il suffit de rouvrir ce fichier pour tout retrouver (code, archives compris).</p><div class="acts"><button id="fOpen">Ouvrir un fichier existant</button><span class="sp"></span><button id="x">Annuler</button>${admin?'<button class="pri" id="fNew">Créer le fichier</button>':''}</div>`);
+ $('x').onclick=close;
+ if($('fNew'))$('fNew').onclick=async()=>{try{fh=await showSaveFilePicker({suggestedName:'planning-donnees.json',types:FT});await idb(1,fh);await writeFile();close();render();toast('Sauvegarde automatique activée')}catch(e){}};
+ $('fOpen').onclick=async()=>{try{const[h]=await showOpenFilePicker({types:FT});if((await h.requestPermission({mode:'readwrite'}))!=='granted')return;loadPayload(await (await h.getFile()).text());fh=h;await idb(1,fh);admin=false;try{sessionStorage.removeItem('pl-admin')}catch(e){}close();render();toast('Planning rechargé depuis le fichier')}catch(e){if(e&&e.name!=='AbortError')toast('Fichier invalide')}};
+}
+let db=null,dl=null,view='week',cur=monday(new Date()),saveT=null,lastWrite=0;
+const $=id=>document.getElementById(id);
+const uid=()=>Math.random().toString(36).slice(2,10);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function ds(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function pd(s){const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)}
+function add(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
+function monday(d){const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());const w=(x.getDay()+6)%7;return add(x,-w)}
+const tm=s=>{const[h,m]=s.split(':').map(Number);return h*60+m};
+const fm=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+const fr=s=>{const d=pd(s);return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')};
+function toast(t){const e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',2500)}
+const staffOf=id=>S.staff.find(s=>s.id===id);
+const absOn=(id,d,A=S.absences)=>A.find(a=>!a.hs&&a.staffId===id&&a.from<=d&&d<=a.to);
+const absPart=(id,d,A=S.absences)=>A.filter(a=>a.hs&&a.staffId===id&&a.from===d);
+function isoWeek(d){const x=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const n=x.getUTCDay()||7;x.setUTCDate(x.getUTCDate()+4-n);const y=new Date(Date.UTC(x.getUTCFullYear(),0,1));return Math.ceil(((x-y)/864e5+1)/7)}
+function migrateStaff(s){if(!s.sched){s.sched={};for(let i=0;i<7;i++)s.sched[i]={on:(s.days||[]).includes(i),start:s.start||'08:00',end:s.end||'17:00',freq:'all'};delete s.days;delete s.start;delete s.end}return s}
+function migrate(){S.backlog=S.backlog||[];S.extra=S.extra||[];S.staff.forEach(migrateStaff)}
+function daySched(st,d){const ex=(S.extra||[]).find(e=>e.staffId===st.id&&e.date===d);if(ex)return ex.on?ex:null;const x=pd(d),c=st.sched&&st.sched[x.getDay()];if(!c||!c.on)return null;if(c.freq&&c.freq!=='all'&&(isoWeek(x)%2===0?'even':'odd')!==c.freq)return null;return c}
+function brk(st,d){const c=st&&daySched(st,d);return c&&c.ps&&c.pe&&tm(c.pe)>tm(c.ps)?[tm(c.ps),tm(c.pe)]:null}
+function endAt(st,d,m,dur){const b=brk(st,d);return b&&m<b[0]&&m+dur>b[0]?m+dur+b[1]-b[0]:m+dur}
+function segsOf(t){return t.segs&&t.segs.length?t.segs:[{d:t.date,s:tm(t.start),e:tm(t.start)+t.dur}]}
+function tEnd(t){const G=segsOf(t);return G[G.length-1].e}
+function freeIv(st,d,busy){
+ const c=works(st,d)&&daySched(st,d);if(!c)return[];
+ let iv=[[tm(c.start),tm(c.end)]];
+ const cutIv=(a,b)=>{const o=[];for(const[x,y]of iv){if(b<=x||a>=y){o.push([x,y]);continue}if(a>x)o.push([x,a]);if(b<y)o.push([b,y])}iv=o};
+ const bk=brk(st,d);if(bk)cutIv(bk[0],bk[1]);
+ for(const p of absPart(st.id,d))cutIv(tm(p.hs),tm(p.he));
+ for(const g of busy)if(g.d===d)cutIv(g.s,g.e);
+ return iv.sort((a,b)=>a[0]-b[0]);
+}
+function place(st,d,m,dur,busy){
+ let left=dur;const segs=[];
+ for(let i=0;i<500&&left>0;i++){
+  for(const[a,b]of freeIv(st,d,busy)){const x=Math.max(a,m);if(x>=b)continue;const k=Math.min(b-x,left);segs.push({d,s:x,e:x+k});left-=k;m=x+k;if(!left)break}
+  if(left){d=ds(add(pd(d),1));m=0}
+ }
+ return left?null:segs;
+}
+function works(st,d,A){return !!daySched(st,d)&&!absOn(st.id,d,A)}
+const FQ={all:'',even:' (sem. paires)',odd:' (sem. impaires)'};
+function summary(s){return [1,2,3,4,5,6,0].filter(x=>s.sched[x].on).map(x=>DN[x]+(s.sched[x].freq!=='all'?' ½':'')).join(' ')}
+
+/* ---------- Stockage ---------- */
+function save(){
+ if(!admin)return;
+ clearTimeout(wT);wT=setTimeout(writeFile,400);
+ try{localStorage.setItem('planning-state',JSON.stringify(S))}catch(e){}
+ if(!db)return;
+ clearTimeout(saveT);saveT=setTimeout(async()=>{lastWrite=Date.now();try{await db.doc('planning/state').set(JSON.parse(JSON.stringify(S)))}catch(e){toast('Échec de sauvegarde : '+(e.code||e.message))}},500);
+}
+async function init(){
+ try{fh=(await idb(0))||null}catch(e){}
+ try{const l=localStorage.getItem('planning-state');if(l)S=JSON.parse(l)}catch(e){}
+ render();
+ try{db=await claude.use('db')}catch(e){db=null}
+ try{dl=await claude.use('downloads')}catch(e){dl=null}
+ if(db){
+  try{const snap=await db.doc('planning/state').get();if(snap.exists)S=Object.assign({staff:[],tasks:[],absences:[]},snap.data());else save()}catch(e){}
+  db.doc('planning/state').onSnapshot(s=>{if(s.exists&&Date.now()-lastWrite>1500){S=JSON.parse(JSON.stringify(s.data()));render()}},()=>{});
+ }
+ render();
+}
+
+/* ---------- Décalage automatique ---------- */
+function reflow(staffId,from,compact,sm=0){
+ const st=staffOf(staffId);if(!st)return 0;
+ const mov=S.tasks.filter(t=>t.staffId===staffId&&!t.fixed&&!t.done);
+ for(const t of mov)if(!t.w)t.w={d:t.date,m:tm(t.start)};
+ mov.sort((a,b)=>a.w.d.localeCompare(b.w.d)||a.w.m-b.w.m||(a.order||0)-(b.order||0));
+ const busy=[];for(const t of S.tasks)if(t.staffId===staffId&&(t.fixed||t.done))busy.push(...segsOf(t));
+ let cd='0000-00-00',cm=0,moved=0;
+ for(const t of mov){
+  let d=t.w.d,m=t.w.m;const pull=compact&&(d>from||(d===from&&m>=sm));
+  if(pull){d=from;m=sm}
+  if(d<cd||(d===cd&&m<cm)){d=cd;m=cm}
+  const r=place(st,d,m,t.dur,busy);if(!r)continue;
+  if(JSON.stringify(r)!==JSON.stringify(segsOf(t)))moved++;
+  t.segs=r;t.date=r[0].d;t.start=fm(r[0].s);if(pull)t.w={d:r[0].d,m:r[0].s};
+  busy.push(...r);const l=r[r.length-1];cd=l.d;cm=l.e;
+ }
+ return moved;
+}
+function slot(st,d,m,dur,busy){
+ for(let i=0;i<500;i++){
+  const c=works(st,d)&&daySched(st,d);
+  if(!c){d=ds(add(pd(d),1));m=0;continue}
+  const ws=tm(c.start),we=tm(c.end);
+  const bk=brk(st,d);m=Math.max(m,ws);
+  let hit=true;
+  while(hit){hit=false;if(bk&&m>=bk[0]&&m<bk[1]){m=bk[1];hit=true}for(const p of absPart(st.id,d)){const a0=tm(p.hs),a1=tm(p.he);if(m<a1&&endAt(st,d,m,dur)>a0){m=a1;hit=true}}const e=endAt(st,d,m,dur);for(const b of busy){if(b.date!==d)continue;const bs=tm(b.start),be=tEnd(b);if(m<be&&e>bs){m=be;hit=true;break}}}
+  if(endAt(st,d,m,dur)<=we||(m===ws))return{d,m};
+  d=ds(add(pd(d),1));m=0;
+ }
+ return null;
+}
+function nextWorkDay(st,d){let x=pd(d);for(let i=0;i<500;i++){x=add(x,1);if(works(st,ds(x)))return ds(x)}return ds(add(pd(d),1))}
+function conflict(t){if(!t.fixed)return false;const st=staffOf(t.staffId);return !!st&&(!works(st,t.date)||absPart(t.staffId,t.date).some(p=>tm(t.start)<tm(p.he)&&tEnd(t)>tm(p.hs)))}
+
+/* ---------- Rendu ---------- */
+function side(){
+ $('sStaff').innerHTML=S.staff.map(s=>`<div class="srow" data-staff="${s.id}"><span class="dot" style="background:${s.color}"></span>${esc(s.name)}<small>${summary(s)||'aucun jour'}</small></div>`).join('')||'<small>Aucun intervenant</small>';
+ $('sTasks').innerHTML=S.backlog.map(t=>`<div class="chip ${t.fixed?'fixed':''}" draggable="true" data-bl="${t.id}" style="--c:${t.color||'var(--accent)'}"><div class="t">${fm(t.dur)} ${t.fixed?'📌':''}</div>${esc(t.title)}</div>`).join('')||'<small>Créez une tâche puis glissez-la sur le planning.</small>';
+}
+function render(){
+ if(!admin){try{admin=!!S.code&&sessionStorage.getItem('pl-admin')===S.code}catch(e){}}
+ document.body.classList.toggle('ro',!admin);
+ migrate();side();
+ {const v=admin||!S.staff.length;$('bFile').style.display=v?'':'none';$('sFile').style.display=v?'':'none';$('sFile').innerHTML=fh?`💾 Sauvegardé dans <b>${esc(fh.name)}</b>`:'<span style="color:var(--abs)">⚠️ Aucun fichier de sauvegarde</span>'}
+ const f=$('fStaff'),fv=f.value;
+ f.innerHTML='<option value="">Tous</option>'+S.staff.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');f.value=fv;
+ f.style.display='';
+ $('bWeek').classList.toggle('on',view==='week');$('bMonth').classList.toggle('on',view==='month');
+ if(view==='week'){
+  const e=add(cur,6);$('title').textContent=`Semaine du ${fr(ds(cur))} au ${fr(ds(e))}/${e.getFullYear()} (S${isoWeek(cur)})`;
+  $('view').innerHTML=weekHTML(S,cur,!admin);
+ }else{
+  $('title').textContent=MN[cur.getMonth()]+' '+cur.getFullYear();
+  $('view').innerHTML=monthHTML();
+ }
+ $('ptitle').textContent=$('title').textContent;
+}
+function chip(t,ro){
+ const st=staffOf(t.staffId)||{color:'#888'};
+ return `<div class="chip ${t.fixed?'fixed':''} ${t.done?'done':''} ${conflict(t)?'conflict':''}" style="--c:${st.color}" ${ro?'':`data-task="${t.id}" draggable="true"`}>
+ <div class="t">${t.start}–${fm(tEnd(t))} ${t.fixed?'📌':''}${t.done?' ✓':''}</div>${esc(t.title)}</div>`;
+}
+function weekHTML(D,mon,ro,arch){
+ const days=[...Array(7)].map((_,i)=>ds(add(mon,i))),td=ds(new Date());
+ const fs=arch?'':$('fStaff').value;
+ const staff=D.staff.map(migrateStaff).filter(s=>!fs||s.id===fs);
+ if(!staff.length)return '<p style="padding:1rem">Ajoutez d\'abord un intervenant (colonne de gauche).</p>';
+ let H0=24,H1=0;
+ for(const s of staff)for(let i=0;i<7;i++){const c=s.sched[i];if(c.on){H0=Math.min(H0,Math.floor(tm(c.start)/60));H1=Math.max(H1,Math.ceil(tm(c.end)/60))}}
+ for(const e of S.extra||[])if(days.includes(e.date)&&staff.some(s=>s.id===e.staffId)){H0=Math.min(H0,Math.floor(tm(e.start)/60));H1=Math.max(H1,Math.ceil(tm(e.end)/60))}
+ for(const t of D.tasks)if(staff.some(s=>s.id===t.staffId))for(const g of segsOf(t))if(days.includes(g.d)){H0=Math.min(H0,Math.floor(g.s/60));H1=Math.max(H1,Math.ceil(g.e/60))}
+ if(H0>=H1){H0=8;H1=18}H1=Math.min(H1,24);
+ const nh=H1-H0,y=m=>(m-H0*60)/60;
+ let h=`<div class="tg" data-h0="${H0}" data-nh="${nh}" style="--nh:${nh}"><div class="hd"></div>`;
+ for(const d of days)h+=`<div class="hd ${d===td?'today':''}"><b>${DN[pd(d).getDay()]} ${fr(d)}</b>${staff.length>1?`<div class="lh">${staff.map(s=>`<span style="--c:${s.color}" title="${esc(s.name)}">${esc(s.name)}</span>`).join('')}</div>`:''}</div>`;
+ h+='<div class="hcol">'+[...Array(nh)].map((_,i)=>`<div class="h">${H0+i}h</div>`).join('')+'</div>';
+ for(const d of days){
+  h+='<div class="dcol">';
+  for(const st of staff){
+   const a=absOn(st.id,d,D.absences),c=daySched(st,d);let inner='';
+   if(c&&!a){const s0=y(tm(c.start)),e0=y(tm(c.end));if(s0>0)inner+=`<div class="nw" style="top:0;height:calc(var(--hp)*${s0})"></div>`;if(e0<nh)inner+=`<div class="nw" style="top:calc(var(--hp)*${e0});bottom:0"></div>`;const bk=brk(st,d);if(bk)inner+=`<div class="nw brk" style="top:calc(var(--hp)*${y(bk[0])});height:calc(var(--hp)*${(bk[1]-bk[0])/60})" title="Pause"></div>`;for(const p of absPart(st.id,d,D.absences))inner+=`<div class="nw pab" style="top:calc(var(--hp)*${y(tm(p.hs))});height:calc(var(--hp)*${(tm(p.he)-tm(p.hs))/60})"><span>${esc(p.reason)} ${p.hs}–${p.he}</span></div>`;const ex=!ro&&(S.extra||[]).find(e=>e.staffId===st.id&&e.date===d);if(ex)inner+=`<div class="unl" data-extra="${ex.id}" title="Cliquer pour rebloquer">🔓 débloqué</div>`}
+   {const bx=!ro&&!c&&(S.extra||[]).find(e=>e.staffId===st.id&&e.date===d&&!e.on);if(bx)inner+=`<div class="unl" data-extra="${bx.id}" title="Cliquer pour annuler">🔒 bloqué</div>`}
+   if(a)inner+=`<div class="labs">Absent · ${esc(a.reason||'')}</div>`;
+   for(const t of D.tasks)if(t.staffId===st.id){const G=segsOf(t);G.forEach((g,i)=>{if(g.d!==d)return;
+    inner+=`<div class="ev ${t.fixed?'fixed':''} ${t.done?'done':''} ${conflict(t)?'conflict':''}" style="--c:${st.color};--tc:${t.color||st.color};top:calc(var(--hp)*${y(g.s)});height:calc(var(--hp)*${(g.e-g.s)/60} - 2px)" ${ro?(arch?'':`data-view="${t.id}"`):`data-task="${t.id}" draggable="true"`} title="${esc(st.name)} · ${esc(t.title)}${t.note?' — '+esc(t.note):''}"><div class="t">${fm(g.s)}–${fm(g.e)} ${t.fixed?'📌':''}${t.done?'✓':''}${G.length>1?` (${i+1}/${G.length})`:''}</div>${esc(t.title)}${t.note?`<div class="nt">📝 ${esc(t.note)}</div>`:''}</div>`})}
+   h+=`<div class="lane ${!c?'off':''} ${a?'absent':''}" ${ro||!c||a?'':`data-lane="${st.id}|${d}"`} ${ro||c||a?'':`data-off="${st.id}|${d}" title="Jour non travaillé : cliquer pour débloquer"`}>${inner}</div>`;
+  }
+  h+='</div>';
+ }
+ return h+'</div>';
+}
+function timeAt(l,cy){const tg=l.closest('.tg'),r=l.getBoundingClientRect(),hp=r.height/+tg.dataset.nh;const m=+tg.dataset.h0*60+Math.round((cy-r.top)/hp*4)*15;return fm(Math.max(0,Math.min(m,23*60+45)))}
+function monthHTML(){
+ const y=cur.getFullYear(),m=cur.getMonth(),start=monday(new Date(y,m,1)),fs=$('fStaff').value;
+ let h='<div class="month">'+[1,2,3,4,5,6,0].map(x=>`<div class="h">${DN[x]}</div>`).join('');
+ for(let i=0;i<42;i++){
+  const dd=add(start,i);if(i>=35&&dd.getMonth()!==m)break;const d=ds(dd);
+  const ts=S.tasks.filter(t=>t.date===d&&(!fs||t.staffId===fs)).sort((a,b)=>a.start.localeCompare(b.start));
+  const ab=S.absences.filter(a=>a.from<=d&&d<=a.to&&(!fs||a.staffId===fs));
+  h+=`<div class="d ${dd.getMonth()!==m?'out':''}" data-day="${d}"><div class="n">${dd.getDate()}</div>`+
+   ab.map(a=>`<div class="mini a">Abs. ${esc(staffOf(a.staffId)?.name)}</div>`).join('')+
+   ts.map(t=>`<div class="mini" style="--c:${staffOf(t.staffId)?.color||'#888'}">${t.fixed?'📌':''}${t.start} ${esc(staffOf(t.staffId)?.name||'')} · ${esc(t.title)}</div>`).join('')+'</div>';
+ }
+ return h+'</div>';
+}
+
+/* ---------- Dialogues ---------- */
+function open(html){$('dlgBody').innerHTML=html;$('dlg').showModal()}
+function close(){$('dlg').close()}
+const opts=(sel)=>S.staff.map(s=>`<option value="${s.id}" ${s.id===sel?'selected':''}>${esc(s.name)}</option>`).join('');
+
+function staffForm(id){
+ const s=staffOf(id)||migrateStaff({name:'',color:COLORS[S.staff.length%COLORS.length],days:[1,2,3,4,5],start:'08:00',end:'17:00'});
+ const w=isoWeek(cur);
+ open(`<h3>${id?'Modifier':'Nouvel'} intervenant</h3><div class="grid">
+ <label>Nom<input id="sN" value="${esc(s.name)}"></label>
+ <label>Couleur<input id="sC" type="color" value="${s.color}"></label>
+ <div class="full"><table class="tbl sched"><tr><th>Jour</th><th>Début</th><th>Fin</th><th>Pause de</th><th>à</th><th>Fréquence</th></tr>${[1,2,3,4,5,6,0].map(x=>{const c=s.sched[x];return `<tr data-d="${x}"><td><label class="ck"><input type="checkbox" class="on" ${c.on?'checked':''}>${DN[x]}</label></td><td><input type="time" class="st" value="${c.start}"></td><td><input type="time" class="en" value="${c.end}"></td><td><input type="time" class="ps" value="${c.ps||''}" title="Début pause"></td><td><input type="time" class="pe" value="${c.pe||''}" title="Fin pause"></td><td><select class="fq"><option value="all">Chaque semaine</option><option value="even" ${c.freq==='even'?'selected':''}>Sem. paires</option><option value="odd" ${c.freq==='odd'?'selected':''}>Sem. impaires</option></select></td></tr>`}).join('')}</table>
+ <small style="color:var(--muted)">La semaine affichée est la S${w} (${w%2?'impaire':'paire'}). Pour « un samedi sur deux », cochez Sam et choisissez la parité.</small></div></div>
+ <div class="acts">${id?'<button class="dng" id="sDel">Supprimer</button>':''}<span class="sp"></span><button id="x">Annuler</button><button class="pri" id="ok">Enregistrer</button></div>`);
+ $('x').onclick=close;
+ if(id)$('sDel').onclick=function(){if(!this.dataset.ok){this.dataset.ok=1;this.textContent='⚠️ Confirmer la suppression';return}S.extra=S.extra.filter(x=>x.staffId!==id);S.staff=S.staff.filter(x=>x.id!==id);S.tasks=S.tasks.filter(t=>t.staffId!==id);S.absences=S.absences.filter(a=>a.staffId!==id);save();close();render()};
+ $('ok').onclick=()=>{
+  const n=$('sN').value.trim();if(!n)return toast('Nom requis');
+  const sched={};let bad=false;
+  document.querySelectorAll('.sched tr[data-d]').forEach(r=>{const c={on:r.querySelector('.on').checked,start:r.querySelector('.st').value||'08:00',end:r.querySelector('.en').value||'17:00',freq:r.querySelector('.fq').value,ps:r.querySelector('.ps').value,pe:r.querySelector('.pe').value};if(c.on&&(tm(c.end)<=tm(c.start)||(c.ps&&c.pe&&(tm(c.pe)<=tm(c.ps)||tm(c.ps)<tm(c.start)||tm(c.pe)>tm(c.end)))))bad=true;sched[r.dataset.d]=c});
+  if(bad)return toast('Horaires invalides');
+  const o={id:id||uid(),name:n,color:$('sC').value,sched};
+  if(id)Object.assign(s,o);else S.staff.push(o);
+  const mv=id?reflow(id,ds(new Date())):0;save();close();render();if(mv)toast(mv+' tâche(s) replanifiée(s)');
+ };
+}
+function taskForm(id,pre={}){
+ if(!S.staff.length)return toast('Ajoutez d\'abord un intervenant');
+ const t=S.tasks.find(x=>x.id===id)||{title:'',staffId:pre.staffId||S.staff[0].id,date:pre.date||ds(new Date()),start:pre.start||(pre.date&&daySched(staffOf(pre.staffId)||S.staff[0],pre.date)||{start:'08:00'}).start,dur:120,fixed:false,done:false,note:''};
+ open(`<h3>${id?'Tâche':'Nouveau client'}</h3><div class="grid">
+ <label class="full">Intitulé<input id="tT" value="${esc(t.title)}" placeholder="Ex : révision moteur bateau X"></label>
+ <label>Intervenant<select id="tS">${opts(t.staffId)}</select></label>
+ <label>Date<input id="tD" type="date" value="${t.date}"></label>
+ <label>Heure de début<input id="tH" type="time" value="${t.start}"></label>
+ <label>Durée (heures)<input id="tU" type="number" min="0.25" step="0.25" value="${t.dur/60}"></label>
+ <label>Couleur<input id="tC" type="color" value="${t.color||rc()}"></label>
+ <label class="ck"><input id="tF" type="checkbox" ${t.fixed?'checked':''}> Tâche fixe (rendez-vous, affichée en bordeaux)</label>
+ ${id&&!t.done?`<label id="tEndL" class="full" style="display:none">Fin réelle (date et heure)<div style="display:flex;gap:.4rem"><input id="tEndD" type="date" value="${segsOf(t).slice(-1)[0].d}"><input id="tEnd" type="time" value="${fm(tEnd(t))}"></div></label>`:''}
+ <label class="full">Note<input id="tN" value="${esc(t.note)}"></label></div>
+ <div class="acts">${id?`<button class="dng" id="tDel">Supprimer</button>${t.done?'<button id="tUndo">Rouvrir</button>':'<button id="tDone">Fait ✓</button><button id="tEarly">Terminée plus tôt ⤴</button>'}${!t.fixed&&!t.done?'<button id="tRep">Non réalisée → reporter</button>':''}`:''}<span class="sp"></span><button id="x">Annuler</button><button class="pri" id="ok">Enregistrer</button></div>`);
+ $('x').onclick=close;
+ if(id){
+  $('tDel').onclick=()=>{S.tasks=S.tasks.filter(x=>x.id!==id);reflow(t.staffId,t.date);save();close();render()};
+  if($('tEarly'))$('tEarly').onclick=function(){if($('tEndL').style.display==='none'){$('tEndL').style.display='';this.textContent='Valider l\'heure de fin ⤴';return}
+   const ed=$('tEndD').value,end=tm($('tEnd').value||'00:00');const G=segsOf(t).filter(g=>g.d<ed||(g.d===ed&&g.s<end)).map(g=>g.d===ed?{d:g.d,s:g.s,e:Math.min(g.e,end)}:g);if(!G.length)return toast('Heure invalide');t.segs=G;t.dur=G.reduce((a,g)=>a+g.e-g.s,0);t.done=true;
+   const mv=reflow(t.staffId,ed,true,end);save();close();render();toast(`Tâche terminée · ${mv} tâche(s) remontée(s)`)};
+  if($('tDone'))$('tDone').onclick=()=>{t.done=true;save();close();render()};
+  if($('tUndo'))$('tUndo').onclick=()=>{t.done=false;reflow(t.staffId,t.date);save();close();render()};
+  if($('tRep'))$('tRep').onclick=()=>{const st=staffOf(t.staffId);t.segs=null;t.w=null;t.date=nextWorkDay(st,t.date);t.start=(daySched(st,t.date)||{start:'08:00'}).start;t.order=-1;const mv=reflow(t.staffId,t.date);delete t.order;save();close();render();toast(`Reportée au ${fr(t.date)} · ${mv} tâche(s) décalée(s)`)};
+ }
+ $('ok').onclick=()=>{
+  const title=$('tT').value.trim();if(!title)return toast('Intitulé requis');
+  const old={s:t.staffId,d:t.date};
+  Object.assign(t,{segs:null,w:null,title,staffId:$('tS').value,date:$('tD').value,start:$('tH').value,dur:Math.round(parseFloat($('tU').value||'1')*60),fixed:$('tF').checked,note:$('tN').value,color:$('tC').value});
+  if(!id){t.id=uid();S.tasks.push(t)}
+  const st=staffOf(t.staffId);
+  if(t.fixed&&!works(st,t.date))toast('Attention : rendez-vous sur un jour non travaillé / absence');
+  const from=old.d<t.date&&id?old.d:t.date;
+  let mv=reflow(t.staffId,from);if(id&&old.s!==t.staffId)mv+=reflow(old.s,old.d);
+  save();close();render();if(mv)toast(mv+' tâche(s) décalée(s)');
+ };
+}
+function absForm(pre={}){
+ if(!S.staff.length)return toast('Ajoutez d\'abord un intervenant');
+ const d=pre.date||ds(new Date()),rs=[...new Set(['Congés','Maladie','Formation','RTT','Rendez-vous médical',...S.absences.map(a=>a.reason)])];
+ open(`<h3>Nouvelle absence</h3><div class="grid">
+ <label class="full">Intervenant<select id="aS">${opts(pre.staffId)}</select></label>
+ <label class="full">Durée<select id="aK"><option value="d">Journée(s) entière(s)</option><option value="h">Quelques heures</option></select></label>
+ <label>Du<input id="aF" type="date" value="${d}"></label><label id="lT">Au<input id="aT" type="date" value="${d}"></label>
+ <label class="hh" style="display:none">De<input id="aHs" type="time" value="14:00"></label><label class="hh" style="display:none">À<input id="aHe" type="time" value="16:00"></label>
+ <label class="full">Motif (choisissez ou tapez le vôtre)<input id="aR" list="rsn" placeholder="Ex : déménagement"><datalist id="rsn">${rs.map(r=>`<option value="${esc(r)}">`).join('')}</datalist></label></div>
+ <div class="acts"><span class="sp"></span><button id="x">Annuler</button><button class="pri" id="ok">Enregistrer</button></div>`);
+ $('x').onclick=close;
+ $('aK').onchange=()=>{const h=$('aK').value==='h';document.querySelectorAll('.hh').forEach(x=>x.style.display=h?'':'none');$('lT').style.display=h?'none':''};
+ $('ok').onclick=()=>{
+  const h=$('aK').value==='h',a={id:uid(),staffId:$('aS').value,from:$('aF').value,to:h?$('aF').value:$('aT').value,reason:$('aR').value.trim()||'Autre'};
+  if(h){a.hs=$('aHs').value;a.he=$('aHe').value;if(!a.hs||!a.he||tm(a.he)<=tm(a.hs))return toast('Heures invalides')}
+  if(!a.from||a.to<a.from)return toast('Dates invalides');
+  S.absences.push(a);const mv=reflow(a.staffId,a.from);
+  const cf=S.tasks.filter(t=>t.staffId===a.staffId&&t.fixed&&t.date>=a.from&&t.date<=a.to&&conflict(t)).length;
+  save();close();render();toast(`${mv} tâche(s) décalée(s)${cf?` · ${cf} rendez-vous en conflit (encadré orange)`:''}`);
+ };
+}
+function workDaysIn(st,a,from,to){let n=0;const s=a.from>from?a.from:from,e=a.to<to?a.to:to;for(let x=pd(s);ds(x)<=e;x=add(x,1))if(daySched(st,ds(x)))n++;return n}
+function recap(){
+ const now=new Date(),mv=ds(now).slice(0,7);
+ open(`<h3>Récapitulatif des absences</h3><div class="grid"><label>Période<select id="rP"><option value="m">Mois</option><option value="y">Année</option></select></label><label>Mois<input id="rM" type="month" value="${mv}"></label></div><div class="scroll" id="rOut"></div><div class="acts"><button id="rPrint">Imprimer</button><span class="sp"></span><button id="x">Fermer</button></div>`);
+ $('x').onclick=close;
+ const draw=()=>{
+  const v=$('rM').value||mv,y=+v.slice(0,4),m=+v.slice(5,7);
+  const from=$('rP').value==='y'?`${y}-01-01`:`${v}-01`,to=$('rP').value==='y'?`${y}-12-31`:ds(new Date(y,m,0));
+  const list=S.absences.filter(a=>a.from<=to&&a.to>=from);
+  let h='<table class="tbl"><tr><th>Intervenant</th><th>Jours</th><th>Heures</th><th>Par motif</th></tr>';
+  for(const st of S.staff){const L=list.filter(a=>a.staffId===st.id);const by={};let tot=0,hr=0;for(const a of L){const k=by[a.reason]=by[a.reason]||{j:0,h:0};if(a.hs){const x=(tm(a.he)-tm(a.hs))/60;hr+=x;k.h+=x}else{const n=workDaysIn(st,a,from,to);tot+=n;k.j+=n}}
+   h+=`<tr><td><span class="dot" style="background:${st.color}"></span>${esc(st.name)}</td><td>${tot}</td><td>${hr?hr+' h':'—'}</td><td>${Object.entries(by).map(([k,n])=>`${esc(k)} : ${[n.j?n.j+' j':'',n.h?n.h+' h':''].filter(Boolean).join(' + ')}`).join(', ')||'—'}</td></tr>`}
+  h+='</table><h3 style="font-size:1.1rem;margin:.8rem 0 .3rem">Détail</h3><table class="tbl"><tr><th>Intervenant</th><th>Du</th><th>Au</th><th>Motif</th><th></th></tr>';
+  h+=list.sort((a,b)=>a.from.localeCompare(b.from)).map(a=>`<tr><td>${esc(staffOf(a.staffId)?.name)}</td><td>${fr(a.from)}</td><td>${a.hs?a.hs+'–'+a.he:fr(a.to)}</td><td>${esc(a.reason)}</td><td><button class="dng adm" data-delabs="${a.id}">✕</button></td></tr>`).join('')||'<tr><td colspan="5">Aucune absence</td></tr>';
+  $('rOut').innerHTML=h+'</table>';
+  $('rOut').querySelectorAll('[data-delabs]').forEach(b=>b.onclick=()=>{const x=S.absences.find(a=>a.id===b.dataset.delabs);S.absences=S.absences.filter(a=>a!==x);if(x)reflow(x.staffId,x.from);save();render();draw()});
+ };
+ $('rP').onchange=draw;$('rM').onchange=draw;draw();
+ $('rPrint').onclick=()=>printHTML('Récapitulatif des absences',$('rOut').innerHTML);
+}
+
+/* ---------- Archives ---------- */
+async function archive(){
+ const k=ds(cur),e=ds(add(cur,6));
+ const snap={week:k,savedAt:new Date().toISOString(),staff:S.staff,tasks:S.tasks.filter(t=>t.date>=k&&t.date<=e),absences:S.absences.filter(a=>a.from<=e&&a.to>=k)};
+ try{
+  if(db)await db.collection('archives').doc(k).set(JSON.parse(JSON.stringify(snap)));
+  else{const A=JSON.parse(localStorage.getItem('planning-arch')||'{}');A[k]=snap;localStorage.setItem('planning-arch',JSON.stringify(A))}
+  writeFile();toast('Semaine du '+fr(k)+' archivée');
+ }catch(err){toast('Échec : '+(err.code||err.message))}
+}
+async function listArch(){
+ if(db){const q=await db.collection('archives').get();return q.docs.map(d=>d.data())}
+ return Object.values(JSON.parse(localStorage.getItem('planning-arch')||'{}'));
+}
+async function hist(){
+ open('<h3>Semaines archivées</h3><div class="scroll" id="hOut">Chargement…</div><div class="acts"><span class="sp"></span><button id="x">Fermer</button></div>');
+ $('x').onclick=close;
+ let L=[];try{L=await listArch()}catch(e){}
+ L.sort((a,b)=>b.week.localeCompare(a.week));
+ $('hOut').innerHTML=L.length?'<table class="tbl"><tr><th>Semaine</th><th>Archivée le</th><th></th></tr>'+L.map((a,i)=>`<tr><td>${fr(a.week)} → ${fr(ds(add(pd(a.week),6)))}/${a.week.slice(0,4)}</td><td>${new Date(a.savedAt).toLocaleString('fr-FR')}</td><td><button data-i="${i}">Voir</button></td></tr>`).join('')+'</table>':'Aucune semaine archivée.';
+ $('hOut').querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{
+  const a=L[+b.dataset.i];a.staff.forEach(migrateStaff);const html=weekHTML(a,pd(a.week),true,true);
+  $('dlg').style.width='min(1200px,96vw)';
+  $('dlgBody').innerHTML=`<h3>Archive — semaine du ${fr(a.week)}</h3><div class="wrap ro" style="padding:0">${html}</div><div class="acts"><button id="hp">Imprimer</button><button id="hg">Aller à cette semaine</button><span class="sp"></span><button id="x">Fermer</button></div>`;
+  $('x').onclick=close;$('hg').onclick=()=>{view='week';cur=pd(a.week);close();render()};
+  $('hp').onclick=()=>printHTML('Archive — semaine du '+fr(a.week),html);
+ });
+}
+$('dlg').addEventListener('close',()=>{$('dlg').style.width=''});
+
+/* ---------- Impression ---------- */
+function printHTML(title,body){
+ const css=[...document.querySelectorAll('style')].map(s=>s.textContent).join('');
+ const doc=`<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>${esc(title)}</title><style>${css}:root{--bg:#fff;--panel:#fff;--ink:#000;--muted:#444;--line:#999;--off:#eee;--chip:#fff}body{padding:10px}</style></head><body><h2>${esc(title)}</h2>${body}</body></html>`;
+ const w=window.open('','_blank');
+ if(w){w.document.write(doc);w.document.close();setTimeout(()=>w.print(),300);return}
+ if(dl){dl.save({filename:title.replace(/[^\w\- ]+/g,'_')+'.html',data:doc}).then(()=>toast('Fichier téléchargé : ouvrez-le puis imprimez')).catch(()=>{})}
+ else{try{window.print()}catch(e){toast('Impression indisponible ici')}}
+}
+$('bPrint').onclick=()=>{
+ if(view==='week'){try{window.print()}catch(e){printHTML($('title').textContent,$('view').innerHTML)}}
+ else printHTML('Planning '+$('title').textContent,$('view').innerHTML);
+};
+
+/* ---------- Événements ---------- */
+$('bWeek').onclick=()=>{view='week';cur=monday(cur);render()};
+$('bMonth').onclick=()=>{view='month';cur=new Date(cur.getFullYear(),add(cur,3).getMonth(),1);render()};
+$('prev').onclick=()=>{cur=view==='week'?add(cur,-7):new Date(cur.getFullYear(),cur.getMonth()-1,1);render()};
+$('next').onclick=()=>{cur=view==='week'?add(cur,7):new Date(cur.getFullYear(),cur.getMonth()+1,1);render()};
+$('today').onclick=()=>{cur=view==='week'?monday(new Date()):new Date(new Date().getFullYear(),new Date().getMonth(),1);render()};
+$('fStaff').onchange=render;
+$('bStaff').onclick=()=>staffForm();
+$('bTask').onclick=()=>blForm();
+function blForm(id){
+ const b=S.backlog.find(x=>x.id===id)||{title:'',dur:120,fixed:false,note:''};
+ open(`<h3>${id?'Tâche à planifier':'Nouveau client'}</h3><div class="grid">
+ <label class="full">Intitulé<input id="tT" value="${esc(b.title)}" placeholder="Ex : révision moteur bateau X"></label>
+ <label>Durée (heures)<input id="tU" type="number" min="0.25" step="0.25" value="${b.dur/60}"></label>
+ <label>Couleur<input id="tC" type="color" value="${b.color||rc()}"></label>
+ <label class="ck"><input id="tF" type="checkbox" ${b.fixed?'checked':''}> Tâche fixe (rendez-vous)</label>
+ <label class="full">Note<input id="tN" value="${esc(b.note)}"></label></div>
+ <div class="acts">${id?'<button class="dng" id="tDel">Supprimer</button>':''}<span class="sp"></span><button id="x">Annuler</button><button class="pri" id="ok">Enregistrer</button></div>`);
+ $('x').onclick=close;
+ if(id)$('tDel').onclick=()=>{S.backlog=S.backlog.filter(x=>x.id!==id);save();close();render()};
+ $('ok').onclick=()=>{const title=$('tT').value.trim();if(!title)return toast('Intitulé requis');Object.assign(b,{title,dur:Math.round(parseFloat($('tU').value||'1')*60),fixed:$('tF').checked,note:$('tN').value,color:$('tC').value});if(!id){b.id=uid();S.backlog.push(b)}save();close();render()};
+}
+$('side').addEventListener('click',e=>{if(!admin)return;const s=e.target.closest('[data-staff]');if(s)return staffForm(s.dataset.staff);const b=e.target.closest('[data-bl]');if(b)blForm(b.dataset.bl)});
+/* glisser-déposer */
+let overEl=null,grabDy=0;const setOver=el=>{if(overEl===el)return;overEl&&overEl.classList.remove('over');overEl=el;el&&el.classList.add('over')};
+document.addEventListener('dragstart',e=>{const el=e.target.closest&&e.target.closest('[data-task],[data-bl]');if(!el)return;grabDy=el.dataset.task?e.clientY-el.getBoundingClientRect().top:0;e.dataTransfer.setData('text/plain',(el.dataset.task?'t:':'b:')+(el.dataset.task||el.dataset.bl));e.dataTransfer.effectAllowed='move'});
+document.addEventListener('dragover',e=>{const el=e.target.closest&&(e.target.closest('[data-lane]')||e.target.closest('#sTasks'));if(el){e.preventDefault();setOver(el)}else setOver(null)});
+document.addEventListener('dragend',()=>setOver(null));
+document.addEventListener('drop',e=>{
+ setOver(null);const v=e.dataTransfer.getData('text/plain');if(!v)return;const k=v[0],id=v.slice(2);
+ const ln=e.target.closest('[data-lane]');
+ if(ln){e.preventDefault();const[sid,date]=ln.dataset.lane.split('|');return dropOn(k,id,sid,date,timeAt(ln,e.clientY-grabDy))}
+ if(e.target.closest('#sTasks')&&k==='t'){e.preventDefault();const t=S.tasks.find(x=>x.id===id);if(!t)return;S.tasks=S.tasks.filter(x=>x!==t);S.backlog.push({id:t.id,title:t.title,dur:t.dur,fixed:t.fixed,note:t.note||'',color:t.color});reflow(t.staffId,t.date);save();render();toast('Tâche retirée du planning')}
+});
+function dropOn(k,id,sid,date,start){
+ const st=staffOf(sid);if(!daySched(st,date))return;let t,old=null;
+ if(k==='b'){const b=S.backlog.find(x=>x.id===id);if(!b)return;S.backlog=S.backlog.filter(x=>x!==b);t=Object.assign({},b,{staffId:sid,date,done:false});S.tasks.push(t)}
+ else{t=S.tasks.find(x=>x.id===id);if(!t)return;old={s:t.staffId,d:t.date}}
+ t.staffId=sid;t.date=date;t.start=start;t.order=-1;t.segs=null;t.w=null;
+ const from=old&&old.s===sid&&old.d<date?old.d:date;
+ let mv=reflow(sid,from);delete t.order;if(old&&old.s!==sid)mv+=reflow(old.s,old.d);
+ save();render();toast(`${t.title} → ${st.name}, ${fr(t.date)} ${t.start}`);
+}
+function dayForm(sid,date){
+ sid=sid||(S.staff[0]||{}).id;date=date||ds(new Date());if(!sid)return toast('Ajoutez d\'abord un intervenant');
+ open(`<h3>Bloquer / débloquer un jour</h3><div class="grid">
+ <label>Intervenant<select id="uW">${opts(sid)}</select></label><label>Date<input id="uD" type="date" value="${date}"></label>
+ <label class="full">Action<select id="uA"><option value="off">🔒 Bloquer (ne travaille pas ce jour-là)</option><option value="on">🔓 Débloquer / horaires spéciaux</option></select></label>
+ <label class="uh">Début<input id="uS" type="time"></label><label class="uh">Fin<input id="uE" type="time"></label>
+ <label class="uh">Pause de<input id="uPs" type="time"></label><label class="uh">à<input id="uPe" type="time"></label>
+ <label class="ck full uh"><input id="uC" type="checkbox"> Avancer sur ce jour les tâches non fixes des jours suivants</label></div>
+ <div class="acts"><span class="sp"></span><button id="x">Annuler</button><button class="pri" id="ok">Valider</button></div>`);
+ const tog=()=>document.querySelectorAll('.uh').forEach(x=>x.style.display=$('uA').value==='on'?'':'none');
+ const fill=()=>{const st=staffOf($('uW').value),d=$('uD').value;if(!st||!d)return;const b=daySched(st,d)||st.sched[pd(d).getDay()];$('uS').value=b.start;$('uE').value=b.end;$('uPs').value=b.ps||'';$('uPe').value=b.pe||'';$('uA').value=works(st,d)?'off':'on';tog()};
+ $('uW').onchange=fill;$('uD').onchange=fill;$('uA').onchange=tog;fill();$('x').onclick=close;
+ $('ok').onclick=()=>{const sid=$('uW').value,date=$('uD').value,on=$('uA').value==='on';
+  const e={id:uid(),staffId:sid,date,on,freq:'all',start:$('uS').value,end:$('uE').value,ps:$('uPs').value,pe:$('uPe').value};
+  if(on&&tm(e.end)<=tm(e.start))return toast('Horaires invalides');
+  S.extra=S.extra.filter(x=>!(x.staffId===sid&&x.date===date));S.extra.push(e);
+  const mv=reflow(sid,date,on&&$('uC').checked);save();close();render();toast(`${on?'Jour débloqué':'Jour bloqué'}${mv?' · '+mv+' tâche(s) replanifiée(s)':''}`)};
+}
+function relock(id){const e=S.extra.find(x=>x.id===id);if(!e)return;open(`<h3>Annuler ce changement ?</h3><p>Le jour reprend ses horaires habituels et les tâches non fixes sont recalées.</p><div class="acts"><span class="sp"></span><button id="x">Annuler</button><button class="pri" id="ok">Confirmer</button></div>`);$('x').onclick=close;$('ok').onclick=()=>{S.extra=S.extra.filter(x=>x!==e);const mv=reflow(e.staffId,e.date);save();close();render();toast(`Horaires habituels rétablis${mv?' · '+mv+' tâche(s) décalée(s)':''}`)}}
+function viewTask(id){const t=S.tasks.find(x=>x.id===id);if(!t)return;const st=staffOf(t.staffId)||{};
+ open(`<h3>${esc(t.title)}</h3><table class="tbl"><tr><th>Intervenant</th><td>${esc(st.name||'')}</td></tr><tr><th>Date</th><td>${DN[pd(t.date).getDay()]} ${fr(t.date)}</td></tr><tr><th>Horaire</th><td>${segsOf(t).map(g=>`${g.d===t.date?'':DN[pd(g.d).getDay()]+' '+fr(g.d)+' : '}${fm(g.s)}–${fm(g.e)}`).join('<br>')}</td></tr><tr><th>Type</th><td>${t.fixed?'📌 Fixe (rendez-vous)':'Non fixe'}</td></tr><tr><th>Statut</th><td>${t.done?'✓ Faite':'À faire'}</td></tr><tr><th>Note</th><td>${t.note?esc(t.note):'—'}</td></tr></table><div class="acts"><span class="sp"></span><button id="x">Fermer</button></div>`);$('x').onclick=close}
+function codeForm(change){
+ const first=!S.code||change;
+ open(`<h3>${change?'Changer le code':first?'Définir le code de gestion':'Mode gestion'}</h3><div class="grid"><label class="full">${first?'Nouveau code':'Code'}<input id="cA" type="password" autocomplete="off"></label>${first?'<label class="full">Confirmer le code<input id="cB" type="password" autocomplete="off"></label>':''}</div><div class="acts"><span class="sp"></span><button id="x">Annuler</button><button class="pri" id="ok">Valider</button></div>`);
+ $('x').onclick=close;setTimeout(()=>$('cA').focus(),50);
+ $('ok').onclick=()=>{const a=$('cA').value;
+  if(first){if(a.length<4)return toast('4 caractères minimum');if(a!==$('cB').value)return toast('Les codes ne correspondent pas');S.code=hash(a);admin=true;save()}
+  else if(hash(a)!==S.code)return toast('Code incorrect');
+  if(fh)fh.requestPermission({mode:'readwrite'}).then(p=>{if(p==='granted')writeFile()}).catch(()=>{});else admin=true;
+  try{sessionStorage.setItem('pl-admin',S.code)}catch(e){}close();render();toast('Mode gestion activé')};
+}
+$('bFile').onclick=fileForm;
+$('bLogin').onclick=()=>codeForm(false);$('bCode').onclick=()=>codeForm(true);
+$('bLogout').onclick=()=>{admin=false;try{sessionStorage.removeItem('pl-admin')}catch(e){}render();toast('Lecture seule')};
+$('bDay').onclick=()=>dayForm();
+$('bAbs').onclick=()=>absForm();
+$('bRecap').onclick=recap;
+$('bArch').onclick=archive;
+$('bHist').onclick=hist;
+$('view').addEventListener('click',e=>{
+ const vw=e.target.closest('[data-view]');if(vw)return viewTask(vw.dataset.view);
+ const u=e.target.closest('[data-extra]');if(u)return relock(u.dataset.extra);
+ const t=e.target.closest('[data-task]');if(t)return taskForm(t.dataset.task);
+ const o=e.target.closest('[data-off]');if(o){const[a,b]=o.dataset.off.split('|');return dayForm(a,b)}
+ const s=e.target.closest('[data-staff]');if(s)return staffForm(s.dataset.staff);
+ const l=e.target.closest('[data-lane]');if(l){const[staffId,date]=l.dataset.lane.split('|');return taskForm(null,{staffId,date,start:timeAt(l,e.clientY)})}
+ const d=e.target.closest('[data-day]');if(d){view='week';cur=monday(pd(d.dataset.day));render()}
+});
+init();
+</script>
+</body>
+</html>
